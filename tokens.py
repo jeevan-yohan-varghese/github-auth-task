@@ -24,13 +24,18 @@ def create_access_token(data: dict, expires_delta: timedelta=None):
 
 
 def decode_token(token: str):
+    details={}
     try:
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[algorithm])
+        
         github_access = payload.get("gh_access")
+        details['gh_access']=github_access
+        details['username']=payload.get("username")
         if github_access is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
 
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
-    return github_access
+    return details

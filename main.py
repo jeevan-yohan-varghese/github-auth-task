@@ -13,6 +13,10 @@ from tokens import decode_token,create_access_token
 load_dotenv(".env")
 app=FastAPI()
 
+from models import Repo
+from schema import Repo as SchemaRepo
+
+
 app.add_middleware(DBSessionMiddleware,db_url=os.environ["DATABASE_URL"])
 
 
@@ -47,21 +51,39 @@ async def github_code(code:str):
     async with httpx.AsyncClient() as client:
         headers.update({'Authorization':f'Bearer {access_token}'})
         response=await client.get('https://api.github.com/user',headers=headers)
-    created_token=create_access_token({'gh_access':access_token,'username':'test'})
+    response_json=response.json()
+    created_token=create_access_token({'gh_access':access_token,'username':response_json['login']})
     return {'token':created_token}
+    #return response.json()
 
 @app.get("/get_repos")
-async def get_repos(token:str = Depends(decode_token)):
+async def get_repos(token:str):
     try:
 
-        g=Github(token)
-        # for repo in g.get_user().get_repos():
-        #     print(repo.owner.name)
+        details=decode_token(token)
+        g=Github(details['gh_access'])
         
-            # print(dir(repo))
+        repos_to_insert=[]
+        for repo in g.get_user().get_repos():
+            db_repo=Repo(repo_id=repo.id,
+                            repo_name=repo.name,
+                            owner_id=repo.owner.id,
+                            owner_name=repo.owner.name,
+                            owner_email=repo.owner.email,
+                            status=repo.private,
+                            stars=repo.stargazers_count)
+            repos_to_insert.append(db_repo)
+        db.session.bulk_save_objects(repos_to_insert)
+        db.session.commit()
+        repos=db.session.query(Repo).filter(Repo.owner_id == details.username)
+        return repos
     except Exception as e:
+        
         print (str(e))
-    return [x.name for x in g.get_user().get_repos()]
+        return {'error':True,'message':e}
+    return {"output":"na"}
+    
+    
 
 
 

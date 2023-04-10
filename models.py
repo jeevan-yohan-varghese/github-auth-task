@@ -16,14 +16,6 @@ class Repo(Base):
     status=Column(String)
     stars=Column(Integer)
 
-    # author=relationship("Author")
 
-class Author(Base):
-    __tablename__="author"
-    id=Column(Integer,primary_key=True)
-    name=Column(String)
-    age=Column(Integer)
-    time_created=Column(DateTime(timezone=True),server_default=func.now())
-    time_updates=Column(DateTime(timezone=True),onupdate=func.now())
     
 
